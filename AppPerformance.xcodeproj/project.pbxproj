@@ -14,6 +14,7 @@
 		99ABCCE321194DA30074A0D5 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99ABCCE121194DA30074A0D5 /* LaunchScreen.storyboard */; };
 		99ABCCF0211971300074A0D5 /* LSLCpuUsage.m in Sources */ = {isa = PBXBuildFile; fileRef = 99ABCCEF211971300074A0D5 /* LSLCpuUsage.m */; };
 		99B8EE7F21197BB6007647F1 /* LSLApplicationMemory.m in Sources */ = {isa = PBXBuildFile; fileRef = 99B8EE7E21197BB6007647F1 /* LSLApplicationMemory.m */; };
+		99E6A2E7211AE1F1004B8BBD /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E6A2E6211AE1F1004B8BBD /* main.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		99ABCCEF211971300074A0D5 /* LSLCpuUsage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LSLCpuUsage.m; sourceTree = "<group>"; };
 		99B8EE7D21197BB6007647F1 /* LSLApplicationMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LSLApplicationMemory.h; sourceTree = "<group>"; };
 		99B8EE7E21197BB6007647F1 /* LSLApplicationMemory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LSLApplicationMemory.m; sourceTree = "<group>"; };
+		99E6A2E6211AE1F1004B8BBD /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,9 +63,10 @@
 		99ABCCD721194DA10074A0D5 /* AppPerformance */ = {
 			isa = PBXGroup;
 			children = (
-				99ABCCEA21194DA90074A0D5 /* CPU */,
+				99ABCCEA21194DA90074A0D5 /* Classes */,
 				99ABCCD821194DA10074A0D5 /* AppDelegate.swift */,
 				99ABCCDA21194DA10074A0D5 /* ViewController.swift */,
+				99E6A2E6211AE1F1004B8BBD /* main.swift */,
 				99ABCCDC21194DA10074A0D5 /* Main.storyboard */,
 				99ABCCDF21194DA30074A0D5 /* Assets.xcassets */,
 				99ABCCE121194DA30074A0D5 /* LaunchScreen.storyboard */,
@@ -72,16 +75,16 @@
 			path = AppPerformance;
 			sourceTree = "<group>";
 		};
-		99ABCCEA21194DA90074A0D5 /* CPU */ = {
+		99ABCCEA21194DA90074A0D5 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				99ABCCED211971300074A0D5 /* AppPerformance-Bridging-Header.h */,
 				99ABCCEE211971300074A0D5 /* LSLCpuUsage.h */,
 				99ABCCEF211971300074A0D5 /* LSLCpuUsage.m */,
-				99ABCCED211971300074A0D5 /* AppPerformance-Bridging-Header.h */,
 				99B8EE7D21197BB6007647F1 /* LSLApplicationMemory.h */,
 				99B8EE7E21197BB6007647F1 /* LSLApplicationMemory.m */,
 			);
-			path = CPU;
+			path = Classes;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -110,6 +113,7 @@
 		99ABCCCD21194DA10074A0D5 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				CLASSPREFIX = LSL;
 				LastSwiftUpdateCheck = 0940;
 				LastUpgradeCheck = 0940;
 				ORGANIZATIONNAME = lisilong;
@@ -157,6 +161,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				99ABCCF0211971300074A0D5 /* LSLCpuUsage.m in Sources */,
+				99E6A2E7211AE1F1004B8BBD /* main.swift in Sources */,
 				99ABCCDB21194DA10074A0D5 /* ViewController.swift in Sources */,
 				99B8EE7F21197BB6007647F1 /* LSLApplicationMemory.m in Sources */,
 				99ABCCD921194DA10074A0D5 /* AppDelegate.swift in Sources */,
@@ -313,7 +318,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.LongDream.AppPerformance;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "AppPerformance/CPU/AppPerformance-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "AppPerformance/Classes/AppPerformance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -334,7 +339,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.LongDream.AppPerformance;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_OBJC_BRIDGING_HEADER = "AppPerformance/CPU/AppPerformance-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "AppPerformance/Classes/AppPerformance-Bridging-Header.h";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

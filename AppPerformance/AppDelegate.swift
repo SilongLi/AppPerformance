@@ -8,14 +8,18 @@
 
 import UIKit
 
-@UIApplicationMain
+//@UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        
+        // APP启动时间耗时，从mian函数开始到didFinishLaunchingWithOptions方法结束
+        DispatchQueue.main.async {
+            print("APP启动时间耗时，从mian函数开始到didFinishLaunchingWithOptions方法：\(CFAbsoluteTimeGetCurrent() - appStartLaunchTime)。")
+        }
         return true
     }
 
