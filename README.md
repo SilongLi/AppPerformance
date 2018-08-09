@@ -111,6 +111,8 @@ kern_return_t thread_info
 @end
 ~~~
 
+----------
+
 ## 2. 内存
 
 虽然现在的手机内存越来越大，但毕竟是有限的，如果因为我们的应用设计不当造成内存过高，可能面临被系统“干掉”的风险，这对用户来说是毁灭性的体验。
@@ -208,3 +210,108 @@ kern_return_t task_info
 **当然我也是赞同这点的>.<**。
 
 
+-------
+
+## 3. 启动时间
+
+APP的启动时间，直接影响用户对你的APP的第一体验和判断。如果启动时间过长，不单单体验直线下降，而且可能会激发苹果的watch dog机制kill掉你的APP，那就悲剧了，用户会觉得APP怎么一启动就卡死然后崩溃了，不能用，然后长按APP点击删除键。（Xcode在debug模式下是没有开启watch dog的，所以我们一定要连接真机测试我们的APP）
+
+在衡量APP的启动时间之前我们先了解下，APP的启动流程：
+
+![APP启动过程](https://upload-images.jianshu.io/upload_images/877439-77c0062f78b28b87.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+APP的启动可以分为两个阶段，即`main()`执行之前和`main()`执行之后。总结如下： 
+
+> t(App 总启动时间) = t1( `main()`之前的加载时间 ) + t2( `main()`之后的加载时间 )。
+>  - t1 = 系统的 dylib (动态链接库)和 App 可执行文件的加载时间；
+> - t2 =  `main()`函数执行之后到`AppDelegate `类中的`applicationDidFinishLaunching:withOptions:`方法执行结束前这段时间。
+
+所以我们对APP启动时间的获取和优化都是从这两个阶段着手，下面先看看`main()`函数执行之前如何获取启动时间。
+
+### 衡量main()函数执行之前的耗时
+
+对于衡量main()之前也就是time1的耗时，苹果官方提供了一种方法，即在真机调试的时候，勾选`DYLD_PRINT_STATISTICS `选项（如果想获取更详细的信息可以使用`DYLD_PRINT_STATISTICS_DETAILS  `），如下图：
+
+![main()函数之前](https://upload-images.jianshu.io/upload_images/877439-f31da849c9cae6b0.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+输出结果如下：
+~~~Swift
+Total pre-main time:  34.22 milliseconds (100.0%)
+         dylib loading time:  14.43 milliseconds (42.1%)
+        rebase/binding time:   1.82 milliseconds (5.3%)
+            ObjC setup time:   3.89 milliseconds (11.3%)
+           initializer time:  13.99 milliseconds (40.9%)
+           slowest intializers :
+             libSystem.B.dylib :   2.20 milliseconds (6.4%)
+   libBacktraceRecording.dylib :   2.90 milliseconds (8.4%)
+    libMainThreadChecker.dylib :   6.55 milliseconds (19.1%)
+       libswiftCoreImage.dylib :   0.71 milliseconds (2.0%)
+~~~
+系统级别的动态链接库，因为苹果做了优化，所以耗时并不多，而大多数时候，t1的时间大部分会消耗在我们自身App中的代码上和链接第三方库上。
+
+所以我们应如何减少main()调用之前的耗时呢，我们可以优化的点有：
+> 1. 减少不必要的`framework `，特别是第三方的，因为动态链接比较耗时；
+> 2. `check framework `应设为`optional `和`required `，如果该`framework `在当前App支持的所有iOS系统版本都存在，那么就设为`required `，否则就设为`optional `，因为`optional `会有些额外的检查；
+> 3. 合并或者删减一些OC类，关于清理项目中没用到的类，可以借助AppCode代码检查工具：
+>   - 删减一些无用的静态变量
+>   - 删减没有被调用到或者已经废弃的方法
+>   - 将不必须在`+load`方法中做的事情延迟到`+initialize`中
+>   - 尽量不要用C++虚函数(创建虚函数表有开销)
+
+### 衡量main()函数执行之后的耗时
+第二阶段的耗时统计，我们认为是从`main ()`执行之后到`applicationDidFinishLaunching:withOptions:`方法最后，那么我们可以通过打点的方式进行统计。
+Objective-C项目因为有main文件，所以我么直接可以通过添加代码获取：
+
+~~~Swift
+// 1. 在 main.m 添加如下代码:
+CFAbsoluteTime AppStartLaunchTime;
+
+int main(int argc, char * argv[]) {
+    AppStartLaunchTime = CFAbsoluteTimeGetCurrent();
+  .....
+}
+
+// 2. 在 AppDelegate.m 的开头声明
+extern CFAbsoluteTime AppStartLaunchTime;
+
+// 3. 最后在AppDelegate.m 的 didFinishLaunchingWithOptions 中添加
+dispatch_async(dispatch_get_main_queue(), ^{
+  NSLog(@"App启动时间--%f",(CFAbsoluteTimeGetCurrent()-AppStartLaunchTime));
+});
+~~~
+    
+大家都知道Swift项目是没有main文件，官方给了如下解释:
+> In Xcode, Mac templates default to including a “main.swift” file, but for iOS apps the default for new iOS project templates is to add @UIApplicationMain to a regular Swift file. This causes the compiler to synthesize a mainentry point for your iOS app, and eliminates the need for a “main.swift” file.
+
+也就是说，通过添加`@UIApplicationMain`标志的方式，帮我们添加了mian函数了。所以如果是我们需要在mian函数中做一些其它操作的话，需要我们自己来创建main.swift文件，这个也是苹果允许的。
+
+- 1.  删除`AppDelegate`类中的 `@UIApplicationMain`标志；
+- 2. 自行创建main.swift文件，并添加程序入口：
+~~~Swift
+import UIKit
+
+var appStartLaunchTime: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()
+
+UIApplicationMain(
+    CommandLine.argc,
+    UnsafeMutableRawPointer(CommandLine.unsafeArgv)
+        .bindMemory(
+            to: UnsafeMutablePointer<Int8>.self,
+            capacity: Int(CommandLine.argc)),
+    nil,
+    NSStringFromClass(AppDelegate.self)
+)
+~~~
+
+- 3. 在AppDelegate的`didFinishLaunchingWithOptions :`方法最后添加：
+~~~Swift
+// APP启动时间耗时，从mian函数开始到didFinishLaunchingWithOptions方法结束
+DispatchQueue.main.async {
+  print("APP启动时间耗时，从mian函数开始到didFinishLaunchingWithOptions方法：\(CFAbsoluteTimeGetCurrent() - appStartLaunchTime)。")
+}
+~~~
+
+main函数之后的优化：
+> -  1. 尽量使用纯代码编写，减少xib的使用；
+> - 2. 启动阶段的网络请求，是否都放到异步请求；
+> - 3. 一些耗时的操作是否可以放到后面去执行，或异步执行等。
