@@ -4,3 +4,4 @@
 
 #import "LSLCpuUsage.h"
 #import "LSLApplicationMemory.h"
+#import "LSLWeakProxy.h"
