@@ -324,23 +324,58 @@ main函数之后的优化：
 
 苹果手机屏幕的正常刷新频率是每秒60次，即可以理解为`FPS`值为60。我们都知道`CADisplayLink `是和屏幕刷新频率保存一致，所以我们是否可以通过它来监控我们的`FPS`呢？！
 
-那么`CADisplayLink `是什么
-> `CADisplayLink `是`CoreAnimation `提供的另一个类似于`NSTimer `的类，它总是在屏幕完成一次更新之前启动，它的接口设计的和`NSTimer `很类似，所以它实际上就是一个内置实现的替代，但是和`timeInterval `以秒为单位不同，`CADisplayLink `有一个整型的`frameInterval `属性，指定了间隔多少帧之后才执行。默认值是1，意味着每次屏幕更新之前都会执行一次。但是如果动画的代码执行起来超过了六十分之一秒，你可以指定`frameInterval `为2，就是说动画每隔一帧执行一次（一秒钟30帧）或者3，也就是一秒钟20次等等。
+首先`CADisplayLink `是什么
+> `CADisplayLink `是`CoreAnimation `提供的另一个类似于`NSTimer `的类，它总是在屏幕完成一次更新之前启动，它的接口设计的和`NSTimer `很类似，所以它实际上就是一个内置实现的替代，但是和`timeInterval `以秒为单位不同，`CADisplayLink `有一个整型的`frameInterval `属性，指定了间隔多少帧之后才执行。默认值是1，意味着每次屏幕更新之前都会执行一次。但是如果动画的代码执行起来超过了六十分之一秒，你可以指定`frameInterval `为2，就是说动画每隔一帧执行一次（一秒钟30帧）。
 
-使用`CADisplayLink `监控界面的`FPS`值：
+使用`CADisplayLink `监控界面的`FPS`值，参考自[YYFPSLabel](https://github.com/ibireme/YYKit/blob/master/Demo/YYKitDemo/YYFPSLabel.m)：
 
 ~~~Swift
-...
+// 详情代码可以clone demo查看，或查看作者的博客
 ~~~
 
-通过`CADisplayLink `的实现方式，并真机测试之后，确实是可以在很大程度上监控界面的`FPS`，基本满足了监控`FPS`提高用户体验的要求，但是和Instruments的可能会有些不一致。下面是我们来讨论下使用`CADisplayLink `的方式，可能存在的问题。
+通过`CADisplayLink `的实现方式，并真机测试之后，确实是可以在很大程度上满足了监控`FPS`的业务需求和为提高用户体验提供参考，但是和Instruments的值可能会有些出入。下面我们来讨论下使用`CADisplayLink `的方式，可能存在的问题。
 
-和Instruments表现不一致的原因:
+- (1). 和Instruments值对比有出入，原因如下:
 
->`CADisplayLink `运行在被添加的那个`RunLoop `之中（一般是在主线程中），因此它只能检测出当前`RunLoop `的帧率。`RunLoop `中所管理的任务的调度时机受任务所处的`RunLoopMode `和CPU的繁忙程度所影响。所以想要真正定位到准确的性能问题所在，最好还是通过Instrument来确认。
+>`CADisplayLink `运行在被添加的那个`RunLoop `之中（一般是在主线程中），因此它只能检测出当前`RunLoop `下的帧率。`RunLoop `中所管理的任务的调度时机，受任务所处的`RunLoopMode `和CPU的繁忙程度所影响。所以想要真正定位到准确的性能问题所在，最好还是通过Instrument来确认。
 
-使用`CADisplayLink `可能存在的问题--循环引用。
-。。。
+- (2). 使用`CADisplayLink `可能存在的**循环引用**问题。
+
+例如以下写法：
+~~~Swift
+let link = CADisplayLink.init(target: self, selector: #selector(tick))
+
+let timer = Timer.init(timeInterval: 1.0, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
+
+~~~
+
+**原因**：以上两种用法，都会对 self 强引用，此时 timer持有 self，self 也持有 timer，循环引用导致页面 dismiss 时，双方都无法释放，造成循环引用。此时使用 weak 也不能有效解决:
+~~~Swift
+weak var weakSelf = self
+let link = CADisplayLink.init(target: weakSelf, selector: #selector(tick))
+~~~
+
+那么我们应该怎样解决这个问题，有人会说在`deinit `(或`dealloc `)中调用定时器的`invalidate`方法，但是这是无效的，因为已经造成循环引用了，不会走到这个方法的。
+
+`YYKit`作者提供的解决方案是使用 [YYWeakProxy](https://github.com/ibireme/YYKit/blob/master/YYKit/Utility/YYWeakProxy.m)，这个`YYWeakProxy `不是继承自`NSObject`而是继承`NSProxy `。
+
+> ### NSProxy 
+> An abstract superclass defining an API for objects that act as stand-ins for other objects or for objects that don’t exist yet.
+
+`NSProxy `是一个为对象定义接口的抽象父类，并且为其它对象或者一些不存在的对象扮演了替身角色。[具体的可以看下NSProxy的官方文档](https://developer.apple.com/documentation/foundation/nsproxy)
+修改后代码如下，亲测定时器如愿释放，`LSLWeakProxy `的具体实现代码已经同步到[github](https://github.com/SilongLi/AppPerformance)中。
+
+~~~Swift
+let link = CADisplayLink.init(target: LSLWeakProxy(target: self), selector: #selector(tick))
+~~~
+
+## PS
+
+更多App性能监控的内容，可查阅作者[博客](https://www.jianshu.com/u/b534ce5f8fae)：
+
+[iOS开发--APP性能检测方案汇总(一)](https://www.jianshu.com/p/95df83780c8f)
+
+[iOS开发--APP性能检测方案汇总(二)](https://www.jianshu.com/p/91302d39efeb)
 
 
 

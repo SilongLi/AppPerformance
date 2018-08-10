@@ -8,7 +8,7 @@
 
 import UIKit
 
-class LSLFPSMonitor: UIView {
+class LSLFPSMonitor: UILabel {
 
     private var link: CADisplayLink = CADisplayLink.init()
     private var count: NSInteger = 0
@@ -16,25 +16,22 @@ class LSLFPSMonitor: UIView {
     private var fpsColor: UIColor = UIColor.green
     public var fps: Double = 0.0
     
-    private var label: UILabel = {
-        let label = UILabel()
-        label.textColor = UIColor.white
-        label.textAlignment = .center
-        label.font = UIFont.init(name: "Menlo", size: 12.0)
-        return label
-    }()
-    
     // MARK: - init
     
     override init(frame: CGRect) {
-        super.init(frame: frame)
+        var f = frame
+        if f.size == CGSize.zero {
+            f.size = CGSize(width: 55.0, height: 22.0)
+        }
+        super.init(frame: f)
+        
+        self.textColor = UIColor.white
+        self.textAlignment = .center
+        self.font = UIFont.init(name: "Menlo", size: 12.0)
+        self.backgroundColor = UIColor.black
+        
         link = CADisplayLink.init(target: LSLWeakProxy(target: self), selector: #selector(tick))
         link.add(to: RunLoop.current, forMode: RunLoopMode.commonModes)
-        
-        label.frame = self.bounds
-        addSubview(label)
-        
-        self.backgroundColor = UIColor.black
     }
     
     deinit {
@@ -75,7 +72,7 @@ class LSLFPSMonitor: UIView {
         attrMStr.setAttributes([NSAttributedStringKey.foregroundColor:fpsColor], range: NSMakeRange(0, attrMStr.length - 3))
         attrMStr.setAttributes([NSAttributedStringKey.foregroundColor:UIColor.white], range: NSMakeRange(attrMStr.length - 3, 3))
         DispatchQueue.main.async {
-            self.label.attributedText = attrMStr
+            self.attributedText = attrMStr
         }
     }
 }
