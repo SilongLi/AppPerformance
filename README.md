@@ -374,6 +374,37 @@ let link = CADisplayLink.init(target: weakSelf, selector: #selector(tick))
 let link = CADisplayLink.init(target: LSLWeakProxy(target: self), selector: #selector(tick))
 ~~~
 
+## 5. 卡顿
+
+在了解卡顿产生的原因之前，先看下屏幕显示图像的原理。
+
+#### 屏幕显示图像的原理：
+
+![屏幕绘制原理](https://upload-images.jianshu.io/upload_images/877439-d8f58796bc648a9d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+现在的手机设备基本都是采用双缓存+垂直同步（即V-Sync）屏幕显示技术。
+
+如上图所示，系统内`CPU `、`GPU `和显示器是协同完成显示工作的。其中`CPU `负责计算显示的内容，例如视图创建、布局计算、图片解码、文本绘制等等。随后`CPU `将计算好的内容提交给`GPU `，由`GPU `进行变换、合成、渲染。`GPU `会预先渲染好一帧放入一个缓冲区内，让视频控制器读取，当下一帧渲染好后，`GPU `会直接将视频控制器的指针指向第二个容器（双缓存原理）。这里，`GPU `会等待显示器的`VSync `（即垂直同步）信号发出后，才进行新的一帧渲染和缓冲区更新（这样能解决画面撕裂现象，也增加了画面流畅度，但需要消费更多的计算资源，也会带来部分延迟）。
+
+#### 卡顿的原因：
+
+![掉帧](https://upload-images.jianshu.io/upload_images/877439-13fba20b4f543bbb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+由上面屏幕显示的原理，采用了垂直同步机制的手机设备。如果在一个`VSync ` 时间内，`CPU ` 或`GPU ` 没有完成内容提交，则那一帧就会被丢弃，等待下一次机会再显示，而这时显示屏会保留之前的内容不变。例如在主线程里添加了阻碍主线程去响应点击、滑动事件、以及阻碍主线程的UI绘制等的代码，都是造成卡顿的常见原因。
+
+#### 卡顿监控：
+卡顿监控一般有两种实现方案：
+- (1). **主线程卡顿监控**。通过子线程监测主线程的`runLoop `，判断两个状态区域之间的耗时是否达到一定阈值。
+
+- (2). **`FPS`监控**。要保持流畅的UI交互，App 刷新率应该当努力保持在 60fps。`FPS`的监控实现原理，上面已经探讨过这里略过。
+
+在使用`FPS `监控性能的实践过程中，发现 `FPS ` 值抖动较大，造成侦测卡顿比较困难。为了解决这个问题，**通过采用检测主线程每次执行消息循环的时间，当这一时间大于规定的阈值时，就记为发生了一次卡顿的方式来监控**。
+这也是美团的移动端采用的性能监控[Hertz ](https://tech.meituan.com/hertz.html)方案，微信团队也在实践过程中提出来类似的方案--[微信读书 iOS 性能优化总结](https://wereadteam.github.io/2016/05/03/WeRead-Performance/)。
+
+![美团Hertz方案流程图](https://upload-images.jianshu.io/upload_images/877439-a61af10b3a84c76f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+**主线程卡顿监控的实现思路**：开辟一个子线程，然后实时计算 kCFRunLoopBeforeSources 和 kCFRunLoopAfterWaiting 两个状态区域之间的耗时是否超过某个阀值，来断定主线程的卡顿情况。
+
 ## PS
 
 更多App性能监控的内容，可查阅作者[博客](https://www.jianshu.com/u/b534ce5f8fae)：

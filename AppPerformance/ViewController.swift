@@ -20,7 +20,7 @@ class ViewController: UIViewController {
     }()
     
     let window: UIWindow = {
-        let window = UIWindow.init(frame: CGRect.init(x: 0, y: 64, width: UIScreen.main.bounds.size.width, height: 30))
+        let window = UIWindow.init(frame: CGRect.init(x: 0, y: 88, width: UIScreen.main.bounds.size.width, height: 30))
         window.rootViewController = UIViewController()
         window.backgroundColor = UIColor.black
         window.makeKeyAndVisible()
@@ -50,8 +50,7 @@ class ViewController: UIViewController {
         window.rootViewController?.view.addSubview(fpsView)
         
         view.addSubview(showFPSBtn)
-        
-        
+
         showUsageInfo()
     }
     
