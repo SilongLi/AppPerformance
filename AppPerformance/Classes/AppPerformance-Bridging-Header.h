@@ -5,3 +5,6 @@
 #import "LSLCpuUsage.h"
 #import "LSLApplicationMemory.h"
 #import "LSLWeakProxy.h"
+#import "LSLBacktraceLogger.h"
+#import "LSLAppFluencyMonitor.h"
+

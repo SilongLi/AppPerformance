@@ -26,6 +26,7 @@ class LSLFPSTableViewController: UITableViewController {
         super.viewDidLoad()
         
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: FPSCellKey)
+        LSLAppFluencyMonitor().startMonitoring()
     }
     
     // MARK: - actions
@@ -46,8 +47,11 @@ class LSLFPSTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: FPSCellKey, for: indexPath)
-        cell.textLabel?.text = "FPS"
+        cell.textLabel?.text = "卡顿"
         cell.imageView?.image = UIImage.init(named: "city")
+        if (indexPath.row > 0 && indexPath.row % 10 == 0) {
+            usleep(100000);
+        }
         return cell
     }
     

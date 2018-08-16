@@ -20,7 +20,7 @@ class ViewController: UIViewController {
     }()
     
     let window: UIWindow = {
-        let window = UIWindow.init(frame: CGRect.init(x: 0, y: 88, width: UIScreen.main.bounds.size.width, height: 30))
+        let window = UIWindow.init(frame: CGRect.init(x: 0, y: 64, width: UIScreen.main.bounds.size.width, height: 30))
         window.rootViewController = UIViewController()
         window.backgroundColor = UIColor.black
         window.makeKeyAndVisible()
@@ -33,7 +33,7 @@ class ViewController: UIViewController {
         btn.addTarget(self, action: #selector(showFPSVC), for: UIControlEvents.touchUpInside)
         btn.layer.borderWidth = 1
         btn.layer.borderColor = UIColor.lightGray.cgColor
-        btn.setTitle("FPS", for: UIControlState.normal)
+        btn.setTitle("卡顿", for: UIControlState.normal)
         btn.setTitleColor(UIColor.black, for: UIControlState.normal)
         return btn
     }()
