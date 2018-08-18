@@ -403,7 +403,112 @@ let link = CADisplayLink.init(target: LSLWeakProxy(target: self), selector: #sel
 
 ![美团Hertz方案流程图](https://upload-images.jianshu.io/upload_images/877439-a61af10b3a84c76f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
-**主线程卡顿监控的实现思路**：开辟一个子线程，然后实时计算 kCFRunLoopBeforeSources 和 kCFRunLoopAfterWaiting 两个状态区域之间的耗时是否超过某个阀值，来断定主线程的卡顿情况。
+方案的提出，是根据滚动引发的Sources事件或其它交互事件总是被快速的执行完成，然后进入到kCFRunLoopBeforeWaiting状态下；假如在滚动过程中发生了卡顿现象，那么RunLoop必然会保持kCFRunLoopAfterWaiting或者kCFRunLoopBeforeSources这两个状态之一。
+
+#### 所以监控主线程卡顿的方案一：
+开辟一个子线程，然后实时计算 kCFRunLoopBeforeSources 和 kCFRunLoopAfterWaiting 两个状态区域之间的耗时是否超过某个阀值，来断定主线程的卡顿情况。
+但是由于主线程的RunLoop在闲置时基本处于Before Waiting状态，这就导致了即便没有发生任何卡顿，这种检测方式也总能认定主线程处在卡顿状态。
+
+为了解决这个问题寒神([南栀倾寒](https://www.jianshu.com/u/cc1e4faec5f7))给出了自己的解决方案，`Swift`的卡顿检测第三方[ANREye](https://link.jianshu.com?t=https://github.com/zixun/ANREye)。这套卡顿监控方案大致思路为：创建一个子线程进行循环检测，每次检测时设置标记位为`YES`，然后派发任务到主线程中将标记位设置为`NO`。接着子线程沉睡超时阙值时长，判断标志位是否成功设置成`NO`，如果没有说明主线程发生了卡顿。
+
+结合这套方案，当主线程处在Before Waiting状态的时候，通过派发任务到主线程来设置标记位的方式处理常态下的卡顿检测：
+
+~~~Objective-C
+#define lsl_SEMAPHORE_SUCCESS 0
+static BOOL lsl_is_monitoring = NO;
+static dispatch_semaphore_t lsl_semaphore;
+static NSTimeInterval lsl_time_out_interval = 0.05;
+
+
+@implementation LSLAppFluencyMonitor
+
+static inline dispatch_queue_t __lsl_fluecy_monitor_queue() {
+    static dispatch_queue_t lsl_fluecy_monitor_queue;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        lsl_fluecy_monitor_queue = dispatch_queue_create("com.dream.lsl_monitor_queue", NULL);
+    });
+    return lsl_fluecy_monitor_queue;
+}
+
+static inline void __lsl_monitor_init() {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        lsl_semaphore = dispatch_semaphore_create(0);
+    });
+}
+
+#pragma mark - Public
++ (instancetype)monitor {
+    return [LSLAppFluencyMonitor new];
+}
+
+- (void)startMonitoring {
+    if (lsl_is_monitoring) { return; }
+    lsl_is_monitoring = YES;
+    __lsl_monitor_init();
+    dispatch_async(__lsl_fluecy_monitor_queue(), ^{
+        while (lsl_is_monitoring) {
+            __block BOOL timeOut = YES;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                timeOut = NO;
+                dispatch_semaphore_signal(lsl_semaphore);
+            });
+            [NSThread sleepForTimeInterval: lsl_time_out_interval];
+            if (timeOut) {
+                [LSLBacktraceLogger lsl_logMain];       // 打印主线程调用栈
+//                [LSLBacktraceLogger lsl_logCurrent];    // 打印当前线程的调用栈
+//                [LSLBacktraceLogger lsl_logAllThread];  // 打印所有线程的调用栈
+            }
+            dispatch_wait(lsl_semaphore, DISPATCH_TIME_FOREVER);
+        }
+    });
+}
+
+- (void)stopMonitoring {
+    if (!lsl_is_monitoring) { return; }
+    lsl_is_monitoring = NO;
+}
+
+@end
+~~~
+
+其中`LSLBacktraceLogger `是获取堆栈信息的类，详情见代码[Github](https://github.com/SilongLi/AppPerformance)。
+
+打印日志如下:
+
+~~~Swift
+2018-08-16 12:36:33.910491+0800 AppPerformance[4802:171145] Backtrace of Thread 771:
+======================================================================================
+libsystem_kernel.dylib         0x10d089bce __semwait_signal + 10
+libsystem_c.dylib              0x10ce55d10 usleep + 53
+AppPerformance                 0x108b8b478 $S14AppPerformance25LSLFPSTableViewControllerC05tableD0_12cellForRowAtSo07UITableD4CellCSo0kD0C_10Foundation9IndexPathVtF + 1144
+AppPerformance                 0x108b8b60b $S14AppPerformance25LSLFPSTableViewControllerC05tableD0_12cellForRowAtSo07UITableD4CellCSo0kD0C_10Foundation9IndexPathVtFTo + 155
+UIKitCore                      0x1135b104f -[_UIFilteredDataSource tableView:cellForRowAtIndexPath:] + 95
+UIKitCore                      0x1131ed34d -[UITableView _createPreparedCellForGlobalRow:withIndexPath:willDisplay:] + 765
+UIKitCore                      0x1131ed8da -[UITableView _createPreparedCellForGlobalRow:willDisplay:] + 73
+UIKitCore                      0x1131b4b1e -[UITableView _updateVisibleCellsNow:isRecursive:] + 2863
+UIKitCore                      0x1131d57eb -[UITableView layoutSubviews] + 165
+UIKitCore                      0x1133921ee -[UIView(CALayerDelegate) layoutSublayersOfLayer:] + 1501
+QuartzCore                     0x10ab72eb1 -[CALayer layoutSublayers] + 175
+QuartzCore                     0x10ab77d8b _ZN2CA5Layer16layout_if_neededEPNS_11TransactionE + 395
+QuartzCore                     0x10aaf3b45 _ZN2CA7Context18commit_transactionEPNS_11TransactionE + 349
+QuartzCore                     0x10ab285b0 _ZN2CA11Transaction6commitEv + 576
+QuartzCore                     0x10ab29374 _ZN2CA11Transaction17observer_callbackEP19__CFRunLoopObservermPv + 76
+CoreFoundation                 0x109dc3757 __CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ + 23
+CoreFoundation                 0x109dbdbde __CFRunLoopDoObservers + 430
+CoreFoundation                 0x109dbe271 __CFRunLoopRun + 1537
+CoreFoundation                 0x109dbd931 CFRunLoopRunSpecific + 625
+GraphicsServices               0x10f5981b5 GSEventRunModal + 62
+UIKitCore                      0x112c812ce UIApplicationMain + 140
+AppPerformance                 0x108b8c1f0 main + 224
+libdyld.dylib                  0x10cd4dc9d start + 1
+
+======================================================================================
+~~~
+
+#### 方案二是结合`CADisplayLink `的方式实现
+在检测FPS值的时候，我们就详细介绍了`CADisplayLink `的使用方式，在这里也可以通过FPS值是否连续低于某个值开进行监控。
 
 ## PS
 
