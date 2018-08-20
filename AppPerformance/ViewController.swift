@@ -73,7 +73,5 @@ class ViewController: UIViewController {
         let fpsVC = LSLFPSTableViewController.init(style: .plain)
         self.navigationController?.pushViewController(fpsVC, animated: true)
     }
-    
-    
 }
 

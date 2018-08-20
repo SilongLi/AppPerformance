@@ -1,6 +1,6 @@
 # App性能监控
 
-APP的性能监控包括： `CPU 占用率`、 `内存使用情况`、`网络状况监控`、`启动时闪退`、`卡顿`、`FPS`、`使用时崩溃`、`耗电量监控`、`流量监控`等等。
+APP的性能监控包括： `CPU 占用率`、`内存使用情况`、`网络状况监控`、`启动时闪退`、`卡顿`、`FPS`、`使用时崩溃`、`耗电量监控`、`流量监控`等等。
 
 [博客地址](https://www.jianshu.com/u/b534ce5f8fae)
 
@@ -475,7 +475,7 @@ static inline void __lsl_monitor_init() {
 
 其中`LSLBacktraceLogger `是获取堆栈信息的类，详情见代码[Github](https://github.com/SilongLi/AppPerformance)。
 
-打印日志如下:
+demo卡顿堆栈打印日志如下:
 
 ~~~Swift
 2018-08-16 12:36:33.910491+0800 AppPerformance[4802:171145] Backtrace of Thread 771:
