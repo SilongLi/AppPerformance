@@ -7,7 +7,7 @@ APP的性能监控包括： `CPU 占用率`、`内存使用情况`、`网络状�
 文中所有代码都已同步到[github](https://github.com/SilongLi/AppPerformance)中，有兴趣的可以`clone `下来一起探讨下。
 
 ## 环境
-> Xcode 10.0
+> Xcode 10.0+
 > 
 > Swift 4.2
 
@@ -515,8 +515,6 @@ libdyld.dylib                  0x10cd4dc9d start + 1
 更多App性能监控的内容，可查阅作者[博客](https://www.jianshu.com/u/b534ce5f8fae)：
 
 [iOS开发--APP性能检测方案汇总(一)](https://www.jianshu.com/p/95df83780c8f)
-
-[iOS开发--APP性能检测方案汇总(二)](https://www.jianshu.com/p/91302d39efeb)
 
 
 
